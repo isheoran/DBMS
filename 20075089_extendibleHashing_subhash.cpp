@@ -109,22 +109,12 @@ public:
 
     //Hash Function
 	int getHash(int id) {
-		int hash = 0;
-		for(int i=0;i<global_depth;i++) {
-			if(id&(1<<i)) hash |= 1<<i;
-		}
-		return hash;
+		return id%(int)(1<<(global_depth));
 	}
 
 	//Hash of last k bits
 	int getHash(int id,int k) {
-		int hash = 0;
-		for(int i=0;i<k;i++) {
-			if(id&(1<<i)) {
-				hash |= 1<<i;
-			}
-		}
-		return hash;
+		return id%(int)(1<<k);
 	}
 
 	int getGlobalDepth() {
@@ -204,25 +194,29 @@ public:
 		return 0;
 	}
 
-	void deleteRecord(int id) {
-		int hash = this->getHash(id);
-        mp[hash]->deleteRecord(id);
+	bool merge(int id) {
+		int hash = getHash(id);
 		int l = mp[hash]->getLocalDepth();
+		//LocalDepth is zero can not be merged further
+		if(l == 0) return false;
 		int cnt_records = 0;
-		hash = getHash(id,l-1);
 		for(int i=0;i<4;i++) {
 			cnt_records += (mp[hash]->getIdStoredAtIdx(i)!=-1);
 		}
-		hash |= 1<<(l-1);
+
+		hash ^= 1<<(l-1);
+		if(mp[hash]->getLocalDepth() != l) return false;
+
 		for(int i=0;i<4;i++) {
 			cnt_records += (mp[hash]->getIdStoredAtIdx(i)!=-1);
-		}
+		} 
 
 		if(cnt_records > 4) {
 			//We can not merge Buckets
-			return;
+			return false;
 		}
-
+        
+		hash |= 1<<(l-1);
 		//We can merge Buckets
 		for(int i=0;i<4;i++) {
 			id = mp[hash]->getIdStoredAtIdx(i);
@@ -248,7 +242,7 @@ public:
 
 		if(global_depth == l) {
 			//Directory can not be halved
-			return;
+			return true;
 		}
 
 		//global_depth > max({local_depths ...}) So, Directory size can be halved
@@ -256,6 +250,15 @@ public:
 		while((int)mp.size() > (1<<global_depth)) {
 			mp.pop_back();
 		}
+
+		return true;
+	}
+
+	void deleteRecord(int id) {
+		int hash = this->getHash(id);
+        mp[hash]->deleteRecord(id);
+		//Run this while loop until their is a possibility of merging
+		while(merge(id));
 	}
 
 	void updateRecord(int id,string updatedRecord) {
@@ -265,8 +268,6 @@ public:
 };
 
 int main() {
-
-    const int global_depth_limit = 12;
 
     Directory dr;
 
@@ -292,15 +293,15 @@ int main() {
 					break;
 				}
 				else if(res  == -1) {
-					cout<<"Duplicate id is already is present please enter unique id !!!\n";
+					cout<<"Duplicate id is already present please enter unique id !!!\n";
 					break;
 				}
 			}
 		}
 		else if(option == 2) {
 			int id;
-			cin>>id;
 			cout<<"Please enter an id to delete corresponding record\n";
+			cin>>id;
 			dr.deleteRecord(id);
 		}
 		else if(option == 3) {
@@ -322,7 +323,7 @@ int main() {
 			cout<<"Bye...\n";
 			break;
 		}
-		cout<<"\n";
+		cout<<"\n\n";
 	}
 
 	return 0;
