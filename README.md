@@ -2,5 +2,5 @@
 
 C++ implementations of the following data structures : 
 
-# B+ Trees
-# Extendible Hashing
+# 1) B+ Trees
+# 2) Extendible Hashing
